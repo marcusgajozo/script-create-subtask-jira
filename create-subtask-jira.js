@@ -50,7 +50,7 @@ async function createJiraSubtask(parentIssueKey, summary) {
   const apiUrl = `${JIRA_URL}/rest/api/2/issue`
   const payload = {
     fields: {
-      project: { key: PROJECT_KEY },
+      project: { key: parentIssueKey.split('-')[0] },
       parent: { key: parentIssueKey },
       summary,
       description: `Sub-tarefa criada automaticamente a partir do commit: '${summary}'`,
@@ -137,46 +137,50 @@ async function transitionJiraIssue(issueKey) {
 }
 
 async function main() {
-    const rl = readline.createInterface({ input, output });
-    let parentStoryId = '';
+  const rl = readline.createInterface({ input, output })
+  let parentStoryId = ''
 
-    try {
-        const rawInput = await rl.question('Digite o ID do card principal (ex: ESS-123): ');
-        parentStoryId = rawInput.trim().toUpperCase();
+  try {
+    const rawInput = await rl.question(
+      'Digite o ID do card principal (ex: ESS-123): '
+    )
+    parentStoryId = rawInput.trim().toUpperCase()
 
-        if (!parentStoryId || !/^[A-Z]+-[0-9]+$/.test(parentStoryId)) {
-            console.error("Erro: O ID do card fornecido é inválido. Ele deve estar no formato 'PROJ-123'.");
-            return; 
-        }
-
-    } finally {
-        rl.close();
+    if (!parentStoryId || !/^[A-Z]+-[0-9]+$/.test(parentStoryId)) {
+      console.error(
+        "Erro: O ID do card fornecido é inválido. Ele deve estar no formato 'PROJ-123'."
+      )
+      return
     }
-    
-    console.log(`\nIniciando automação para a História '${parentStoryId}'.`);
-    
-    const commits = await getGitCommits('main');
+  } finally {
+    rl.close()
+  }
 
-    if (!commits || commits.length === 0) {
-        console.log("\nNenhum commit novo para processar.");
-        return;
-    }
+  console.log(`\nIniciando automação para a História '${parentStoryId}'.`)
 
-    console.log(`\nEncontrados ${commits.length} commits. Processando um por um...`);
-    for (const commitMessage of commits) {
-        console.log(`\n--- Processando commit: "${commitMessage}" ---`);
-        
-        const newIssueKey = await createJiraSubtask(parentStoryId, commitMessage);
-        
-        if (newIssueKey) {
-            const assigned = await assignJiraIssue(newIssueKey);
-            if (assigned) {
-                await transitionJiraIssue(newIssueKey);
-            }
-        }
-        console.log(`--- Fim do processamento para: "${commitMessage}" ---`);
+  const commits = await getGitCommits()
+
+  if (!commits || commits.length === 0) {
+    console.log('\nNenhum commit novo para processar.')
+    return
+  }
+
+  console.log(
+    `\nEncontrados ${commits.length} commits. Processando um por um...`
+  )
+  for (const commitMessage of commits) {
+    console.log(`\n--- Processando commit: "${commitMessage}" ---`)
+
+    const newIssueKey = await createJiraSubtask(parentStoryId, commitMessage)
+
+    if (newIssueKey) {
+      const assigned = await assignJiraIssue(newIssueKey)
+      if (assigned) {
+        await transitionJiraIssue(newIssueKey)
+      }
     }
+    console.log(`--- Fim do processamento para: "${commitMessage}" ---`)
+  }
 }
 
-
-main();
+main()
