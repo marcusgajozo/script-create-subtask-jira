@@ -1,5 +1,8 @@
 import { Buffer } from 'node:buffer'
 import { exec } from 'node:child_process'
+import readline from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
+
 
 // --- CONFIGURAÇÃO BÁSICA ---
 const JIRA_URL =
